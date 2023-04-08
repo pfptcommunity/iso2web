@@ -10,9 +10,7 @@ from typing import Dict
 from requests import Session
 from datetime import datetime, timedelta, timezone
 import dateutil.parser
-import json
 import math
-import hashlib
 
 ISO_URL_INFO = {'WEB': {'URL': 'https://proofpointisolation.com/api/v2/reporting/usage-data'},
                 'URL': {'URL': 'https://urlisolation.com/api/v2/reporting/usage-data'}}
@@ -229,10 +227,6 @@ def collect_events(log: Logger, options: Dict):
         for chunk in make_chunks(isolation_data_sorted, chunk_size):
             # Get last date for the chunk we are processing
             last_processed_entry_date = dateutil.parser.parse(chunk[-1]['date'])
-            # Create the event for the chunk
-
-            print(json.dumps(chunk, indent=4))
-
             # Write the single event
             try:
                 response = session.post(callback, json=chunk, headers=None, cookies=None,
@@ -316,5 +310,5 @@ def main():
 
 
 # Main entry point of program
-if (__name__ == '__main__'):
+if __name__ == '__main__':
     main()
