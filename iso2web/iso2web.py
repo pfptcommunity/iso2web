@@ -14,7 +14,6 @@ import json
 import math
 import hashlib
 
-
 ISO_URL_INFO = {'WEB': {'URL': 'https://proofpointisolation.com/api/v2/reporting/usage-data'},
                 'URL': {'URL': 'https://urlisolation.com/api/v2/reporting/usage-data'}}
 
@@ -66,12 +65,8 @@ def collect_events(log: Logger, options: Dict):
     identifier = options.get('identifier')
     log.info("Unique Identifier: {}".format(identifier))
 
-    # Identifier hash for checkpoint
-    id_hash = hashlib.md5(identifier.encode()).hexdigest()
-    log.debug("Identifier hash: {}".format(id_hash))
-
     # Checkpoint key for next start date
-    checkpoint_file = "{}.checkpoint".format(id_hash)
+    checkpoint_file = "{}.checkpoint".format(identifier)
     log.debug("Checkpoint File: {}".format(checkpoint_file))
 
     # Get checkpoint date value
@@ -236,13 +231,13 @@ def collect_events(log: Logger, options: Dict):
             last_processed_entry_date = dateutil.parser.parse(chunk[-1]['date'])
             # Create the event for the chunk
 
-            print(json.dumps(chunk,indent=4))
+            print(json.dumps(chunk, indent=4))
 
             # Write the single event
             try:
                 response = session.post(callback, json=chunk, headers=None, cookies=None,
-                                           verify=True, cert=None,
-                                           timeout=timeout)
+                                        verify=True, cert=None,
+                                        timeout=timeout)
                 records += len(chunk)
                 next_start_date = last_processed_entry_date + timedelta(seconds=1)
                 save_check_point(checkpoint_file, next_start_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3])
@@ -253,6 +248,7 @@ def collect_events(log: Logger, options: Dict):
                 break
 
     log.info("Total records processed: {}".format(records))
+
 
 def main():
     if len(sys.argv) == 1:
@@ -276,14 +272,14 @@ def main():
                         dest="loglevel", type=str.upper, required=False,
                         help='Log level to be used critical, error, warning, info or debug.')
     parser.add_argument('-c', '--chunk', metavar='<chunk_size>',
-                        dest="chunk_size", type=int, required=False, default=10000,
-                        help='Number of records posted to the target per post.')
+                        dest="chunk_size", type=int, required=False, default=10000, choices=range(1, 10001),
+                        help='Number of records processed per event 1 to 10000 (default: 10000)')
     parser.add_argument('--pagesize', metavar='<page_size>',
-                        dest="page_size", type=int, required=False, default=10000,
-                        help='Number of records processed per request 1 to 10000.')
+                        dest="page_size", type=int, required=False, default=10000, choices=range(1, 10001),
+                        help='Number of records processed per request 1 to 10000 (default: 10000).')
     parser.add_argument('--timeout', metavar='<timeout>',
-                        dest="timeout", type=int, required=False, default=60,
-                        help="Number of seconds before the web request timeout occurs (default: 60)")
+                        dest="timeout", type=int, required=False, default=60, choices=range(1, 3601),
+                        help="Number of seconds before the web request timeout occurs 1 to 3600 (default: 60)")
 
     args = parser.parse_args()
 
@@ -294,7 +290,7 @@ def main():
     stdout_fmt = logging.Formatter('%(message)s')
     stdout_handler.setFormatter(stdout_fmt)
 
-    file_handler = logging.FileHandler('spam.log')
+    file_handler = logging.FileHandler("{}.log".format(args.identifier))
     file_fmt = logging.Formatter(
         '%(asctime)s %(levelname)s pid=%(process)d tid=%(threadName)s file=%(filename)s:%(funcName)s:%(lineno)d %(name)s | %(message)s',
         "%Y-%m-%dT%H:%M:%S%z")
