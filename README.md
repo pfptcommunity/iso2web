@@ -5,6 +5,9 @@ This tool sends Proofpoint Isolation data to a webhook of your choice.
 ### Requirements:
 
 * Python 3.9+
+* python-dateutil
+* requests
+* setuptools
  
 ### Installing the Package
 You can install the API library using the following command. 
