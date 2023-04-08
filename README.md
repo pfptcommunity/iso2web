@@ -1,4 +1,4 @@
-# Simple Tool to Send Proofpoint Isolation Data to a Webhook
+# Tool to Send Proofpoint Isolation Logs a Webhook
 
 This tool sends Proofpoint Isolation data to a webhook of your choice. 
 
