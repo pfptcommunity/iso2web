@@ -3,16 +3,12 @@
 #
 import os.path
 import base64
-import socket
 import sys
 import argparse
 import logging
 from logging import Logger
 from typing import Dict
-
-import socks
 from requests import Session
-from requests.auth import HTTPProxyAuth, HTTPDigestAuth
 from datetime import datetime, timedelta, timezone
 import dateutil.parser
 import math
