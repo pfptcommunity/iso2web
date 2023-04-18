@@ -61,6 +61,7 @@ def list_config_profiles():
 def save_config_profile(profile_name: str, options: Dict):
     config = configparser.ConfigParser()
     config.read(os.path.join(os.getcwd(), 'iso2web.ini'))
+    print(options)
     config[profile_name] = options
     with open(os.path.join(os.getcwd(), 'iso2web.ini'), "w") as config_file:
         config.write(config_file)
@@ -164,7 +165,7 @@ def collect_events(log: Logger, options: Dict):
     if 'proxy_user' in options and 'proxy_pass' in options:
         credentials = "{}:{}@".format(options['proxy_user'], options['proxy_pass'])
 
-    if options['proxy_type']:
+    if 'proxy_type' in options:
         proxies = {'https': "{}://{}{}:{}".format(options['proxy_type'], credentials, options['proxy_host'],
                                                   options['proxy_port'])}
 
@@ -349,7 +350,7 @@ def main():
                             help='Target URL to post the JSON events.')
     parser_add.add_argument('-l', '--loglevel', metavar='<level>',
                             choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'],
-                            dest="log_level", type=str.upper, required=False,
+                            dest="log_level", type=str.upper, required=False, default='INFO',
                             help='Log level to be used critical, error, warning, info or debug.')
     parser_add.add_argument('-c', '--chunk', metavar='<chunk_size>',
                             dest="chunk_size", type=int, required=False, default=10000, choices=range(1, 10001),
@@ -361,9 +362,9 @@ def main():
                             dest="timeout", type=int, required=False, default=60, choices=range(1, 3601),
                             help="Number of seconds before the web request timeout occurs 1 to 3600 (default: 60)")
 
-    parser_add.add_argument('--proxy', metavar='<none|http|socks4|socks5>',
-                            choices=['none', 'http', 'socks4', 'socks5'],
-                            default='none', dest="proxy_type", type=str.lower, required=False, help='Proxy type')
+    parser_add.add_argument('--proxy', metavar='<http|socks4|socks5>',
+                            choices=['http', 'socks4', 'socks5'],
+                            dest="proxy_type", type=str.lower, required=False, help='Proxy type')
     parser_add.add_argument('--proxy-host', metavar='<host>', dest="proxy_host",
                             type=str, required=False, help='Proxy hostname')
     parser_add.add_argument('--proxy-port', metavar='<port>', dest="proxy_port",
@@ -391,9 +392,9 @@ def main():
         options['timeout'] = args.timeout
         options['api_key'] = encrypt(args.identifier, args.api_key)
 
-        if args.proxy_type != 'none' and (not args.proxy_host or not args.proxy_port):
+        if args.proxy_type and (not args.proxy_host or not args.proxy_port):
             parser.error('--proxy must be used with --proxy-host and --proxy-port')
-        else:
+        elif args.proxy_type and args.proxy_host and args.proxy_port:
             options['proxy_type'] = args.proxy_type
             options['proxy_host'] = args.proxy_host
             options['proxy_port'] = args.proxy_port
@@ -422,7 +423,7 @@ def main():
         options['timeout'] = section.getint('timeout')
         options['api_key'] = decrypt(args.identifier, section.get('api_key'))
 
-        if section.get('proxy_type') != 'none' and section.get('proxy_host') and section.get('proxy_port'):
+        if section.get('proxy_type') and section.get('proxy_host') and section.get('proxy_port'):
             options['proxy_type'] = section.get('proxy_type')
             options['proxy_host'] = section.get('proxy_host')
             options['proxy_port'] = section.getint('proxy_port')
