@@ -61,7 +61,6 @@ def list_config_profiles():
 def save_config_profile(profile_name: str, options: Dict):
     config = configparser.ConfigParser()
     config.read(os.path.join(os.getcwd(), 'iso2web.ini'))
-    print(options)
     config[profile_name] = options
     with open(os.path.join(os.getcwd(), 'iso2web.ini'), "w") as config_file:
         config.write(config_file)
