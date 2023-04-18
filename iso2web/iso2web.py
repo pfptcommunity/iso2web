@@ -2,18 +2,83 @@
 # encoding = utf-8
 #
 import os.path
+import base64
+import socket
 import sys
 import argparse
 import logging
 from logging import Logger
 from typing import Dict
+
+import socks
 from requests import Session
+from requests.auth import HTTPProxyAuth, HTTPDigestAuth
 from datetime import datetime, timedelta, timezone
 import dateutil.parser
 import math
+import configparser
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 ISO_URL_INFO = {'WEB': {'URL': 'https://proofpointisolation.com/api/v2/reporting/usage-data'},
                 'URL': {'URL': 'https://urlisolation.com/api/v2/reporting/usage-data'}}
+
+
+def encrypt(profile_name: str, text: str) -> str:
+    ad = profile_name.encode('utf-8')
+    data = text.encode('utf-8')
+    key = AESGCM.generate_key(bit_length=128)
+    aesgcm = AESGCM(key)
+    nonce = os.urandom(12)
+    enc = aesgcm.encrypt(nonce, data, ad)
+    secret = base64.b64encode(nonce + key + enc)
+    return secret.decode('utf-8')
+
+
+def decrypt(profile_name: str, data: str) -> str:
+    ad = profile_name.encode('utf-8')
+    secret = base64.b64decode(data.encode('utf-8'))
+    nonce = secret[:12]
+    key = secret[12:12 + 16]
+    enc = secret[12 + 16:]
+    aesgcm = AESGCM(key)
+    data = aesgcm.decrypt(nonce, enc, ad)
+    return data.decode('utf-8')
+
+
+def get_script_path() -> str:
+    return os.path.abspath(os.path.dirname(__file__))
+
+
+def list_config_profiles():
+    config = configparser.ConfigParser()
+    config.read(os.path.join(get_script_path(), 'iso2web.ini'))
+    if not config.sections():
+        print("No profiles defined")
+
+    for section in config.sections():
+        print("\nProfile ID: {}".format(section))
+        for k, v in config[section].items():
+            print("{}: {}".format(k,v))
+
+
+def save_config_profile(profile_name: str, options: Dict):
+    config = configparser.ConfigParser()
+    config.read(os.path.join(get_script_path(), 'iso2web.ini'))
+    config[profile_name] = options
+    with open(os.path.join(get_script_path(), 'iso2web.ini'), "w") as config_file:
+        config.write(config_file)
+
+
+def delete_config_profile(profile_name: str):
+    config = configparser.ConfigParser()
+    config.read(os.path.join(get_script_path(), 'iso2web.ini'))
+    if config.has_section(profile_name):
+        config.remove_section(profile_name)
+        print("Profile deleted: {}".format(profile_name))
+        with open(os.path.join(get_script_path(), 'iso2web.ini'), "w") as config_file:
+            config.write(config_file)
+    else:
+        print("No profile defined: {}".format(profile_name))
 
 
 def get_script_version() -> str:
@@ -96,6 +161,16 @@ def collect_events(log: Logger, options: Dict):
     url = ISO_URL_INFO[input_type]['URL']
     log.debug("Base URL: {}".format(url))
 
+    proxies = None
+    credentials = ''
+
+    if 'proxy_user' in options and 'proxy_pass' in options:
+        credentials = "{}:{}@".format(options['proxy_user'], options['proxy_pass'])
+
+    if options['proxy_type']:
+        proxies = {'https': "{}://{}{}:{}".format(options['proxy_type'], credentials, options['proxy_host'],
+                                                  options['proxy_port'])}
+
     # Will be set to start date by either checkpoint or 30days back
     date_start = None
 
@@ -139,12 +214,12 @@ def collect_events(log: Logger, options: Dict):
 
     session = Session()
 
-    # Start assuming we have one page but total pages are calcualted in the loop
+    # Start assuming we have one page but total pages are calculated in the loop
     while True:
         response = None
         try:
-            response = session.get(url, params=parameters, headers=headers, cookies=None, verify=True, cert=None,
-                                   timeout=timeout)
+            response = session.get(url, proxies=proxies, params=parameters, headers=headers,
+                                   cookies=None, verify=True, cert=None, timeout=timeout)
         except Exception as e:
             log.error("Call to send_http_request failed: {}".format(e))
             break
@@ -245,68 +320,137 @@ def collect_events(log: Logger, options: Dict):
 
 
 def main():
-    if len(sys.argv) == 1:
-        print('iso2web [-h] --endpoint [web|url] ')
-        exit(1)
+    # if len(sys.argv) == 1:
+    #     print('iso2web [-h] --endpoint [web|url] ')
+    #     exit(1)
 
     parser = argparse.ArgumentParser(prog="iso2web",
                                      description="""Tool to send Proofpoint Isolation data to LogRythm""",
                                      formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=80))
-    parser.add_argument('-e', '--endpoint', metavar='<web|url>', choices=['WEB', 'URL'], dest="endpoint",
-                        type=str.upper, required=True, help='Isolation API endpoint')
-    parser.add_argument('-k', '--apikey', metavar='<level>',
-                        dest="api_key", type=str, required=True,
-                        help='Proofpoint Isolation API Key.')
-    parser.add_argument('-i', '--identifier', metavar='<unique_id>', dest="identifier", type=str, required=True,
-                        help='Unique identifier associated with the import.')
-    parser.add_argument('-t', '--target', metavar='<url>', dest="callback", type=str, required=True,
-                        help='Target URL to post the JSON events.')
-    parser.add_argument('-l', '--loglevel', metavar='<level>',
-                        choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'],
-                        dest="loglevel", type=str.upper, required=False,
-                        help='Log level to be used critical, error, warning, info or debug.')
-    parser.add_argument('-c', '--chunk', metavar='<chunk_size>',
-                        dest="chunk_size", type=int, required=False, default=10000, choices=range(1, 10001),
-                        help='Number of records processed per event 1 to 10000 (default: 10000)')
-    parser.add_argument('--pagesize', metavar='<page_size>',
-                        dest="page_size", type=int, required=False, default=10000, choices=range(1, 10001),
-                        help='Number of records processed per request 1 to 10000 (default: 10000).')
-    parser.add_argument('--timeout', metavar='<timeout>',
-                        dest="timeout", type=int, required=False, default=60, choices=range(1, 3601),
-                        help="Number of seconds before the web request timeout occurs 1 to 3600 (default: 60)")
+
+    sub = parser.add_subparsers(title='Required Actions',
+                                description='',
+                                required=True,
+                                help='An action must be specified',
+                                dest='action')
+
+    parser_list = sub.add_parser('list')
+
+    parser_delete = sub.add_parser('delete')
+    parser_delete.add_argument('-i', '--identifier', metavar='<unique_id>', dest="identifier", type=str, required=True,
+                               help='Unique identifier associated with the import.')
+
+    parser_run = sub.add_parser('run')
+    parser_run.add_argument('-i', '--identifier', metavar='<unique_id>', dest="identifier", type=str, required=True,
+                            help='Unique identifier associated with the import.')
+
+    parser_add = sub.add_parser('add')
+    parser_add.add_argument('-i', '--identifier', metavar='<unique_id>', dest="identifier", type=str, required=True,
+                            help='Unique identifier associated with the import.')
+    parser_add.add_argument('-e', '--endpoint', metavar='<web|url>', choices=['WEB', 'URL'], dest="endpoint",
+                            type=str.upper, required=True, help='Isolation API endpoint')
+    parser_add.add_argument('-k', '--apikey', metavar='<level>',
+                            dest="api_key", type=str, required=True,
+                            help='Proofpoint Isolation API Key.')
+    parser_add.add_argument('-t', '--target', metavar='<url>', dest="callback", type=str, required=True,
+                            help='Target URL to post the JSON events.')
+    parser_add.add_argument('-l', '--loglevel', metavar='<level>',
+                            choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'],
+                            dest="log_level", type=str.upper, required=False,
+                            help='Log level to be used critical, error, warning, info or debug.')
+    parser_add.add_argument('-c', '--chunk', metavar='<chunk_size>',
+                            dest="chunk_size", type=int, required=False, default=10000, choices=range(1, 10001),
+                            help='Number of records processed per event 1 to 10000 (default: 10000)')
+    parser_add.add_argument('--pagesize', metavar='<page_size>',
+                            dest="page_size", type=int, required=False, default=10000, choices=range(1, 10001),
+                            help='Number of records processed per request 1 to 10000 (default: 10000).')
+    parser_add.add_argument('--timeout', metavar='<timeout>',
+                            dest="timeout", type=int, required=False, default=60, choices=range(1, 3601),
+                            help="Number of seconds before the web request timeout occurs 1 to 3600 (default: 60)")
+
+    parser_add.add_argument('--proxy', metavar='<none|http|socks4|socks5>',
+                            choices=['none', 'http', 'socks4', 'socks5'],
+                            default='none', dest="proxy_type", type=str.lower, required=False, help='Proxy type')
+    parser_add.add_argument('--proxy-host', metavar='<host>', dest="proxy_host",
+                            type=str, required=False, help='Proxy hostname')
+    parser_add.add_argument('--proxy-port', metavar='<port>', dest="proxy_port",
+                            type=int, required=False, help='Proxy port')
+    parser_add.add_argument('--proxy-user', metavar='<username>', dest="proxy_user",
+                            type=str, required=False, help='Proxy username')
+    parser_add.add_argument('--proxy-pass', metavar='<password>', dest="proxy_pass",
+                            type=str, required=False, help='Proxy password')
 
     args = parser.parse_args()
-
-    log = logging.getLogger('iso2web')
-    log.setLevel('INFO')
-
-    stdout_handler = logging.StreamHandler(stream=sys.stdout)
-    stdout_fmt = logging.Formatter('%(message)s')
-    stdout_handler.setFormatter(stdout_fmt)
-
-    file_handler = logging.FileHandler("{}.log".format(args.identifier))
-    file_fmt = logging.Formatter(
-        '%(asctime)s %(levelname)s pid=%(process)d tid=%(threadName)s file=%(filename)s:%(funcName)s:%(lineno)d %(name)s | %(message)s',
-        "%Y-%m-%dT%H:%M:%S%z")
-
-    file_handler.setFormatter(file_fmt)
-
-    log.addHandler(stdout_handler)
-    log.addHandler(file_handler)
-
-    if args.loglevel:
-        log.setLevel(args.loglevel)
-
     options = dict()
-    options['input_type'] = args.endpoint
-    options['identifier'] = args.identifier
-    options['callback'] = args.callback
-    options['chunk_size'] = args.chunk_size
-    options['page_size'] = args.page_size
-    options['timeout'] = args.timeout
-    options['api_key'] = args.api_key
 
-    collect_events(log, options)
+    if args.action == 'list':
+        list_config_profiles()
+    elif args.action == 'add':
+        options['log_level'] = args.log_level
+        options['input_type'] = args.endpoint
+        options['callback'] = args.callback
+        options['chunk_size'] = args.chunk_size
+        options['page_size'] = args.page_size
+        options['timeout'] = args.timeout
+        options['api_key'] = encrypt(args.identifier, args.api_key)
+
+        if args.proxy_type != 'none' and (not args.proxy_host or not args.proxy_port):
+            parser.error('--proxy must be used with --proxy-host and --proxy-port')
+        else:
+            options['proxy_type'] = args.proxy_type
+            options['proxy_host'] = args.proxy_host
+            options['proxy_port'] = args.proxy_port
+            if (args.proxy_user and not args.proxy_pass) or (not args.proxy_user and args.proxy_pass):
+                parser.error('--proxy-user and --proxy-pass must both be used')
+            elif args.proxy_user and args.proxy_pass:
+                options['proxy_user'] = args.proxy_user
+                options['proxy_pass'] = encrypt(args.identifier, args.proxy_pass)
+
+        save_config_profile(args.identifier, options)
+    elif args.action == 'delete':
+        delete_config_profile(args.identifier)
+    elif args.action == 'run':
+        config = configparser.ConfigParser()
+        config.read(os.path.join(get_script_path(), 'iso2web.ini'))
+        if not config.has_section(args.identifier):
+            print("No profile defined: {}".format(args.identifier))
+
+        section = config[args.identifier]
+        options['identifier'] = args.identifier
+        options['log_level'] = section.get('log_level')
+        options['input_type'] = section.get('input_type')
+        options['callback'] = section.get('callback')
+        options['chunk_size'] = section.getint('chunk_size')
+        options['page_size'] = section.getint('page_size')
+        options['timeout'] = section.getint('timeout')
+        options['api_key'] = decrypt(args.identifier, section.get('api_key'))
+
+        if section.get('proxy_type') != 'none' and section.get('proxy_host') and section.get('proxy_port'):
+            options['proxy_type'] = section.get('proxy_type')
+            options['proxy_host'] = section.get('proxy_host')
+            options['proxy_port'] = section.getint('proxy_port')
+            if section.get('proxy_user') and section.get('proxy_pass'):
+                options['proxy_user'] = section.get('proxy_user')
+                options['proxy_pass'] = decrypt(args.identifier, section.get('proxy_pass'))
+
+        log = logging.getLogger('iso2web')
+        log.setLevel(options['log_level'])
+
+        stdout_handler = logging.StreamHandler(stream=sys.stdout)
+        stdout_fmt = logging.Formatter('%(message)s')
+        stdout_handler.setFormatter(stdout_fmt)
+
+        file_handler = logging.FileHandler("{}.log".format(args.identifier))
+        file_fmt = logging.Formatter(
+            '%(asctime)s %(levelname)s pid=%(process)d tid=%(threadName)s file=%(filename)s:%(funcName)s:%(lineno)d %(name)s | %(message)s',
+            "%Y-%m-%dT%H:%M:%S%z")
+
+        file_handler.setFormatter(file_fmt)
+
+        log.addHandler(stdout_handler)
+        log.addHandler(file_handler)
+
+        collect_events(log, options)
 
 
 # Main entry point of program
