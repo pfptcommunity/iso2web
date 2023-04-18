@@ -52,9 +52,10 @@ def list_config_profiles():
         print("No profiles defined")
 
     for section in config.sections():
-        print("\nProfile ID: {}".format(section))
+        print("Profile ID: {}".format(section))
         for k, v in config[section].items():
             print("{}: {}".format(k, v))
+        print()
 
 
 def save_config_profile(profile_name: str, options: Dict):
@@ -300,7 +301,7 @@ def collect_events(log: Logger, options: Dict):
             last_processed_entry_date = dateutil.parser.parse(chunk[-1]['date'])
             # Write the single event
             try:
-                response = session.post(callback, json=chunk, headers=None, cookies=None,
+                response = session.post(callback, json=chunk, proxies=proxies, headers=None, cookies=None,
                                         verify=True, cert=None,
                                         timeout=timeout)
                 records += len(chunk)
