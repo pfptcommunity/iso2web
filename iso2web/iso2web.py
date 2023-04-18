@@ -47,7 +47,7 @@ def get_script_path() -> str:
 
 def list_config_profiles():
     config = configparser.ConfigParser()
-    config.read(os.path.join(get_script_path(), 'iso2web.ini'))
+    config.read(os.path.join(os.getcwd(), 'iso2web.ini'))
     if not config.sections():
         print("No profiles defined")
 
@@ -59,19 +59,19 @@ def list_config_profiles():
 
 def save_config_profile(profile_name: str, options: Dict):
     config = configparser.ConfigParser()
-    config.read(os.path.join(get_script_path(), 'iso2web.ini'))
+    config.read(os.path.join(os.getcwd(), 'iso2web.ini'))
     config[profile_name] = options
-    with open(os.path.join(get_script_path(), 'iso2web.ini'), "w") as config_file:
+    with open(os.path.join(os.getcwd(), 'iso2web.ini'), "w") as config_file:
         config.write(config_file)
 
 
 def delete_config_profile(profile_name: str):
     config = configparser.ConfigParser()
-    config.read(os.path.join(get_script_path(), 'iso2web.ini'))
+    config.read(os.path.join(os.getcwd(), 'iso2web.ini'))
     if config.has_section(profile_name):
         config.remove_section(profile_name)
         print("Profile deleted: {}".format(profile_name))
-        with open(os.path.join(get_script_path(), 'iso2web.ini'), "w") as config_file:
+        with open(os.path.join(os.getcwd(), 'iso2web.ini'), "w") as config_file:
             config.write(config_file)
     else:
         print("No profile defined: {}".format(profile_name))
@@ -407,7 +407,7 @@ def main():
         delete_config_profile(args.identifier)
     elif args.action == 'run':
         config = configparser.ConfigParser()
-        config.read(os.path.join(get_script_path(), 'iso2web.ini'))
+        config.read(os.path.join(os.getcwd(), 'iso2web.ini'))
         if not config.has_section(args.identifier):
             print("No profile defined: {}".format(args.identifier))
 
@@ -436,7 +436,7 @@ def main():
         stdout_fmt = logging.Formatter('%(message)s')
         stdout_handler.setFormatter(stdout_fmt)
 
-        file_handler = logging.FileHandler("{}.log".format(args.identifier))
+        file_handler = logging.FileHandler(os.path.join(os.getcwd(), '{}.log'.format(args.identifier)))
         file_fmt = logging.Formatter(
             '%(asctime)s %(levelname)s pid=%(process)d tid=%(threadName)s file=%(filename)s:%(funcName)s:%(lineno)d %(name)s | %(message)s',
             "%Y-%m-%dT%H:%M:%S%z")
