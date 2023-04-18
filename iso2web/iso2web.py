@@ -316,10 +316,6 @@ def collect_events(log: Logger, options: Dict):
 
 
 def main():
-    # if len(sys.argv) == 1:
-    #     print('iso2web [-h] --endpoint [web|url] ')
-    #     exit(1)
-
     parser = argparse.ArgumentParser(prog="iso2web",
                                      description="""Tool to send Proofpoint Isolation data to LogRythm""",
                                      formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=80))
@@ -375,6 +371,10 @@ def main():
                             type=str, required=False, help='Proxy username')
     parser_add.add_argument('--proxy-pass', metavar='<password>', dest="proxy_pass",
                             type=str, required=False, help='Proxy password')
+
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        exit(1)
 
     args = parser.parse_args()
     options = dict()
