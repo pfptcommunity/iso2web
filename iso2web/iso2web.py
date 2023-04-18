@@ -54,7 +54,7 @@ def list_config_profiles():
     for section in config.sections():
         print("\nProfile ID: {}".format(section))
         for k, v in config[section].items():
-            print("{}: {}".format(k,v))
+            print("{}: {}".format(k, v))
 
 
 def save_config_profile(profile_name: str, options: Dict):
