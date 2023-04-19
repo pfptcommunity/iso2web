@@ -17,6 +17,7 @@ pip install git+https://github.com/pfptcommunity/iso2web.git
 ```
 ### Use Cases
 * SIEM solution without Proofpoint Isolation collector eg. LogRythm
+* JSON post to data lake solution
 
 ### Usage
 ```
