@@ -54,4 +54,4 @@ iso2web list
 ```
 
 ### Future
-Implement authentication to webhook endpoint. 
+Implement HTTP authentication for webhook callback.
