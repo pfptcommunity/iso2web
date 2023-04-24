@@ -15,6 +15,10 @@ import math
 import configparser
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
+# Don't warn about insecure certificate
+import requests
+requests.packages.urllib3.disable_warnings()
+
 ISO_URL_INFO = {'WEB': {'URL': 'https://proofpointisolation.com/api/v2/reporting/usage-data'},
                 'URL': {'URL': 'https://urlisolation.com/api/v2/reporting/usage-data'}}
 
@@ -104,7 +108,7 @@ def make_chunks(data, length):
         yield data[i:i + length]
 
 
-def collect_events(log: Logger, options: Dict):
+def collect_events(log: Logger, options: Dict, verify: bool):
     # Current log level
     loglevel = logging.getLevelName(log.getEffectiveLevel())
     log.info("Log Level: {}".format(loglevel))
@@ -216,7 +220,7 @@ def collect_events(log: Logger, options: Dict):
         response = None
         try:
             response = session.get(url, proxies=proxies, params=parameters, headers=headers,
-                                   cookies=None, verify=True, cert=None, timeout=timeout)
+                                   cookies=None, verify=verify, cert=None, timeout=timeout)
         except Exception as e:
             log.error("Call to send_http_request failed: {}".format(e))
             break
@@ -302,7 +306,7 @@ def collect_events(log: Logger, options: Dict):
             # Write the single event
             try:
                 response = session.post(callback, json=chunk, proxies=proxies, headers=None, cookies=None,
-                                        verify=True, cert=None,
+                                        verify=verify, cert=None,
                                         timeout=timeout)
                 records += len(chunk)
                 next_start_date = last_processed_entry_date + timedelta(seconds=1)
@@ -336,6 +340,8 @@ def main():
     parser_run = sub.add_parser('run')
     parser_run.add_argument('-i', '--identifier', metavar='<unique_id>', dest="identifier", type=str, required=True,
                             help='Unique identifier associated with the import.')
+    parser_run.add_argument('--ignore', dest="verify", action='store_false', default=True,
+                            help='Ignore certificate errors and warnings.')
 
     parser_add = sub.add_parser('add')
     parser_add.add_argument('-i', '--identifier', metavar='<unique_id>', dest="identifier", type=str, required=True,
@@ -446,8 +452,8 @@ def main():
 
         log.addHandler(stdout_handler)
         log.addHandler(file_handler)
-
-        collect_events(log, options)
+        print(args.verify)
+        collect_events(log, options, args.verify)
 
 
 # Main entry point of program
