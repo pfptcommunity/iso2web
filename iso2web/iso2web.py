@@ -308,6 +308,7 @@ def collect_events(log: Logger, options: Dict, verify: bool):
                 response = session.post(callback, json=chunk, proxies=proxies, headers=None, cookies=None,
                                         verify=verify, cert=None,
                                         timeout=timeout)
+                log.info("Callback response: {} - {}".format(response.status_code,response.reason))
                 records += len(chunk)
                 next_start_date = last_processed_entry_date + timedelta(seconds=1)
                 save_check_point(checkpoint_file, next_start_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3])
@@ -452,7 +453,7 @@ def main():
 
         log.addHandler(stdout_handler)
         log.addHandler(file_handler)
-        print(args.verify)
+
         collect_events(log, options, args.verify)
 
 
