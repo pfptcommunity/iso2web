@@ -47,7 +47,10 @@ iso2web delete -i url_iso_prod
 ```
 iso2web run -i url_iso_prod
 ```
-
+To ignore certificate issues us the --ignore syntax shown below. 
+```
+iso2web run -i url_iso_prod --ignore
+```
 #### Listing all API profiles
 ```
 iso2web list
