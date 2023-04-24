@@ -1,4 +1,4 @@
-# Tool to Send Proofpoint Isolation Logs to a Webhook
+# Tool Sends Proofpoint Isolation Logs to a Webhook
 
 This tool sends Proofpoint Isolation data to a webhook of your choice. 
 
@@ -15,6 +15,9 @@ You can install the API library using the following command.
 ```
 pip install git+https://github.com/pfptcommunity/iso2web.git
 ```
+### Use Cases
+* SIEM solution without Proofpoint Isolation collector eg. LogRythm
+* JSON post to data lake solution
 
 ### Usage
 ```
@@ -49,3 +52,6 @@ iso2web run -i url_iso_prod
 ```
 iso2web list
 ```
+
+### Future
+Implement HTTP authentication for webhook callback.
