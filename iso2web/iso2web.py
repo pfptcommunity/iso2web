@@ -8,7 +8,7 @@ import argparse
 import logging
 from logging import Logger
 from typing import Dict
-from requests import Session
+from requests import Session, HTTPError
 from datetime import datetime, timedelta, timezone
 import dateutil.parser
 import math
@@ -308,12 +308,14 @@ def collect_events(log: Logger, options: Dict, verify: bool):
                 response = session.post(callback, json=chunk, proxies=proxies, headers=None, cookies=None,
                                         verify=verify, cert=None,
                                         timeout=timeout)
-                log.info("Callback response: {} - {}".format(response.status_code,response.reason))
+                response.raise_for_status()
                 records += len(chunk)
                 next_start_date = last_processed_entry_date + timedelta(seconds=1)
                 save_check_point(checkpoint_file, next_start_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3])
                 log.info("Updating checkpoint [{}] with: {}".format(checkpoint_file, next_start_date.strftime(
                     '%Y-%m-%dT%H:%M:%S.%f')[:-3]))
+            except HTTPError as e:
+                log.error("HTTPError: {}".format(e))
             except Exception as e:
                 log.error("Failed to post data to callback: {}".format(e))
                 break
