@@ -222,7 +222,7 @@ def collect_events(log: Logger, options: Dict, verify: bool):
             response = session.get(url, proxies=proxies, params=parameters, headers=headers,
                                    cookies=None, verify=verify, cert=None, timeout=timeout)
             response.raise_for_status()
-            log.debug("Proofpoint Isolation API successfully queried")
+            log.debug("Proofpoint Isolation API successfully queried: {} - {}".format(response.status_code,response.reason))
         except HTTPError as e:
             if e.response.status_code == 400:
                 log.error("Proofpoint Isolation API bad request")
@@ -295,7 +295,7 @@ def collect_events(log: Logger, options: Dict, verify: bool):
             break
 
     if isolation_data:
-        # Sort the isolation data by oldest to newest date
+        # Sort the isolation data by oldest to the newest date
         isolation_data_sorted = sorted(isolation_data, key=lambda x: dateutil.parser.parse(x['date']))
         for chunk in make_chunks(isolation_data_sorted, chunk_size):
             # Get last date for the chunk we are processing
@@ -306,7 +306,7 @@ def collect_events(log: Logger, options: Dict, verify: bool):
                                         verify=verify, cert=None,
                                         timeout=timeout)
                 response.raise_for_status()
-                log.debug("Data posted to callback successfully")
+                log.debug("Data posted to callback successfully: {} - {}".format(response.status_code,response.reason))
                 records += len(chunk)
                 next_start_date = last_processed_entry_date + timedelta(seconds=1)
                 save_check_point(checkpoint_file, next_start_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3])
