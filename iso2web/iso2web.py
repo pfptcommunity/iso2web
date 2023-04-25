@@ -221,22 +221,19 @@ def collect_events(log: Logger, options: Dict, verify: bool):
         try:
             response = session.get(url, proxies=proxies, params=parameters, headers=headers,
                                    cookies=None, verify=verify, cert=None, timeout=timeout)
+            response.raise_for_status()
+            log.debug("Proofpoint Isolation API successfully queried")
+        except HTTPError as e:
+            if e.response.status_code == 400:
+                log.error("Proofpoint Isolation API bad request")
+            elif e.response.status_code == 403 or e.response.status_code == 401:
+                log.error("Proofpoint Isolation API api key invalid")
+            else:
+                log.error("Proofpoint Isolation API unknown failure: {}".format(e))
+            break
         except Exception as e:
             log.error("Call to send_http_request failed: {}".format(e))
             break
-
-        if response.status_code == 200:
-            log.debug("Proofpoint Isolation API successfully queried")
-        elif response.status_code == 400:
-            log.error("Proofpoint Isolation API bad request")
-        elif response.status_code == 403 or response.status_code == 401:
-            log.error("Proofpoint Isolation API api key invalid")
-        else:
-            log.error("Proofpoint Isolation API unknown failure [{}]".format(response.status_code))
-
-        # Raise HTTPError exception if we had a failure
-        if response.status_code != 200:
-            response.raise_for_status()
 
         r_json = response.json()
 
@@ -309,6 +306,7 @@ def collect_events(log: Logger, options: Dict, verify: bool):
                                         verify=verify, cert=None,
                                         timeout=timeout)
                 response.raise_for_status()
+                log.debug("Data posted to callback successfully")
                 records += len(chunk)
                 next_start_date = last_processed_entry_date + timedelta(seconds=1)
                 save_check_point(checkpoint_file, next_start_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3])
