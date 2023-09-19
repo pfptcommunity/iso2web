@@ -7,7 +7,7 @@ where = ["src"]
 
 [project]
 name = "iso2web"
-version = "1.0.1"
+version = "1.0.2"
 readme = "README.md"
 description = "Tool to Send Proofpoint Isolation Data to a Webhook"
 license = { text = "MIT" }
