@@ -20,8 +20,8 @@ dependencies = [
 
 [project.urls]
 repository = "https://github.com/pfptcommunity/iso2web"
-#homepage = "https://github.com/pfptcommunity/iso2web"
-#documentation = "https://github.com/pfptcommunity/iso2web"
+homepage = "https://www.proofpoint.com/us/products/cloud-security/isolation"
+documentation = "https://proofpoint.my.site.com/community/s/article/Proofpoint-Isolation-API-Guide"
 #changelog = "https://github.com/pfptcommunity/iso2web"
 
 [project.scripts]
