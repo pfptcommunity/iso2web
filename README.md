@@ -56,5 +56,14 @@ iso2web list
 ```
 #### Basic Data Flow
 ![Isolation API to Webhook drawio](https://user-images.githubusercontent.com/83429267/235716231-dcd6faa0-bff2-4d14-b23e-31d39d5d8314.png)
+
 ### Future
 Implement HTTP authentication for webhook callback.
+
+### Limitations
+
+There are currently no known limitations.
+
+For more information please see: https://proofpoint.my.site.com/community/s/article/Proofpoint-Isolation-API-Guide
+
+
