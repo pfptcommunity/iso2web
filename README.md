@@ -11,10 +11,19 @@ This tool sends Proofpoint Isolation data to a webhook of your choice.
 * pysocks
  
 ### Installing the Package
-You can install the API library using the following command. 
+
+You can install the tool using the following command directly from Github.
+
 ```
 pip install git+https://github.com/pfptcommunity/iso2web.git
 ```
+
+or can install the tool using pip.
+
+```
+pip install iso2web
+```
+
 ### Use Cases
 * SIEM solution without Proofpoint Isolation collector eg. LogRythm
 * JSON post to data lake solution
