@@ -13,9 +13,10 @@ description = "Tool to Send Proofpoint Isolation Data to a Webhook"
 license = { text = "MIT" }
 requires-python = ">3.9"
 dependencies = [
-    'python-dateutil>=2.8.2',
-    'requests>=2.28.2',
-    'cryptography>=40.0.2'
+    'python-dateutil',
+    'requests',
+    'cryptography',
+    'pysocks'
 ]
 
 [project.urls]
