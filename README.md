@@ -30,12 +30,13 @@ pip install iso2web
 
 ### Usage
 ```
-usage: iso2web [-h] {list,delete,run,add} ...
+usage: iso2web [-h] [--version] {list,delete,run,add} ...
 
 Tool to send Proofpoint Isolation data to LogRythm
 
 optional arguments:
   -h, --help             show this help message and exit
+  --version              Show the program's version and exit
 
 Required Actions:
 
