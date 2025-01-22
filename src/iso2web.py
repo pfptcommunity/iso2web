@@ -1,22 +1,24 @@
 #
 # encoding = utf-8
 #
-import os.path
-import base64
-import sys
 import argparse
+import base64
+import configparser
 import logging
+import math
+import os.path
+import sys
+from datetime import datetime, timedelta, timezone
+from importlib.metadata import version, PackageNotFoundError
 from logging import Logger
 from typing import Dict
-from requests import Session, HTTPError
-from datetime import datetime, timedelta, timezone
-import dateutil.parser
-import math
-import configparser
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
+import dateutil.parser
 # Don't warn about insecure certificate
 import requests
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from requests import Session, HTTPError
+
 requests.packages.urllib3.disable_warnings()
 
 ISO_URL_INFO = {'WEB': {'URL': 'https://proofpointisolation.com/api/v2/reporting/usage-data'},
@@ -83,7 +85,10 @@ def delete_config_profile(profile_name: str):
 
 
 def get_script_version() -> str:
-    return '0.1.0'
+    try:
+        return version("iso2web")
+    except PackageNotFoundError:
+        return "0.0.0"
 
 
 def get_app_name() -> str:
@@ -222,7 +227,8 @@ def collect_events(log: Logger, options: Dict, verify: bool):
             response = session.get(url, proxies=proxies, params=parameters, headers=headers,
                                    cookies=None, verify=verify, cert=None, timeout=timeout)
             response.raise_for_status()
-            log.debug("Proofpoint Isolation API successfully queried: {} - {}".format(response.status_code,response.reason))
+            log.debug(
+                "Proofpoint Isolation API successfully queried: {} - {}".format(response.status_code, response.reason))
         except HTTPError as e:
             if e.response.status_code == 400:
                 log.error("Proofpoint Isolation API bad request")
@@ -306,7 +312,7 @@ def collect_events(log: Logger, options: Dict, verify: bool):
                                         verify=verify, cert=None,
                                         timeout=timeout)
                 response.raise_for_status()
-                log.debug("Data posted to callback successfully: {} - {}".format(response.status_code,response.reason))
+                log.debug("Data posted to callback successfully: {} - {}".format(response.status_code, response.reason))
                 records += len(chunk)
                 next_start_date = last_processed_entry_date + timedelta(seconds=1)
                 save_check_point(checkpoint_file, next_start_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3])
@@ -379,6 +385,8 @@ def main():
                             type=str, required=False, help='Proxy username')
     parser_add.add_argument('--proxy-pass', metavar='<password>', dest="proxy_pass",
                             type=str, required=False, help='Proxy password')
+    parser.add_argument('--version', action='version', help="Show the program's version and exit",
+                       version=f'iso2web {get_script_version()}')
 
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)

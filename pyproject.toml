@@ -1,13 +1,17 @@
 [build-system]
-requires=['setuptools', 'setuptools-scm']
-build-backend="setuptools.build_meta"
+requires = ['setuptools', 'setuptools-scm']
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "node-and-date"
 
 [tools.setuptools.packages.find]
 where = ["src"]
 
 [project]
 name = "iso2web"
-version = "1.0.2"
+dynamic = ["version"]
 readme = "README.md"
 description = "Tool to Send Proofpoint Isolation Data to a Webhook"
 license = { text = "MIT" }
