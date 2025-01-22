@@ -385,7 +385,7 @@ def main():
                             type=str, required=False, help='Proxy username')
     parser_add.add_argument('--proxy-pass', metavar='<password>', dest="proxy_pass",
                             type=str, required=False, help='Proxy password')
-    parser.add_argument('--version', action='version', help="Show the program's version and exit",
+    parser.add_argument('--version', action='version', help="show the program's version and exit",
                        version=f'iso2web {get_script_version()}')
 
     if len(sys.argv) == 1:
