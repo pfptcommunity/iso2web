@@ -36,7 +36,7 @@ Tool to send Proofpoint Isolation data to LogRythm
 
 optional arguments:
   -h, --help             show this help message and exit
-  --version              Show the program's version and exit
+  --version              show the program's version and exit
 
 Required Actions:
 
