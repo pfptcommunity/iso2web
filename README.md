@@ -1,5 +1,5 @@
 # Tool Sends Proofpoint Isolation Logs to a Webhook
-
+[![PyPI Downloads](https://static.pepy.tech/badge/iso2web)](https://pepy.tech/projects/iso2web)  
 This tool sends Proofpoint Isolation data to a webhook of your choice. 
 
 ### Requirements:
