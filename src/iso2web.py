@@ -355,7 +355,7 @@ def main():
                             help='Unique identifier associated with the import.')
     parser_add.add_argument('-e', '--endpoint', metavar='<web|url>', choices=['WEB', 'URL'], dest="endpoint",
                             type=str.upper, required=True, help='Isolation API endpoint')
-    parser_add.add_argument('-k', '--apikey', metavar='<level>',
+    parser_add.add_argument('-k', '--apikey', metavar='<apikey>',
                             dest="api_key", type=str, required=True,
                             help='Proofpoint Isolation API Key.')
     parser_add.add_argument('-t', '--target', metavar='<url>', dest="callback", type=str, required=True,
